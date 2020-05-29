@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 #include <set>
 #include <sstream>
 
@@ -88,3 +88,8 @@ CQ_MENU(menu_demo_1) {
 CQ_MENU(menu_demo_2) {
     send_private_message(10000, "测试");
 }
+
+//3036721833@qq.com
+//08041218
+
+
