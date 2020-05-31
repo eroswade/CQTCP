@@ -26,8 +26,52 @@ CQ_INIT{
 		uv::TcpServer server(loop);
 		server.setMessageCallback([](uv::TcpConnectionPtr conn, const char* data, ssize_t size)
 		{
-				std::cout << std::string(data, size) << std::endl;
-				conn->write(data, size, nullptr);
+			logging::warning("socket", std::string(data, size));
+			//conn->write(data, size, nullptr);
+
+			bool ret = reader.parse(std::string(data, size),root);
+			if (ret)
+			{
+				if (root.isMember("groupid"))
+				{
+					if (root.isMember("message"))
+					{
+						try{
+							send_group_message(root["groupid"].asInt64(), root["message"].asString());
+							conn->write("{\"status\" : 1, \"message\" : \"群消息成功\"}");
+						}
+						catch (ApiError &err)
+						{
+							logging::warning("群聊", "群消息失败, 错误码: " + to_string(err.code));
+							conn->write("{\"status\" : 0, \"message\" : \"群消息失败\"}");
+						}
+					}
+				}
+
+				if (root.isMember("qqid"))
+				{
+					if (root.isMember("message"))
+					{
+						try
+						{
+							auto msgid = send_private_message(root["qqid"].asInt64(), root["message"].asString()); // 直接复读消息
+							conn->write("{\"status\" : 1, \"message\" : \"私聊消息成功\"}");
+
+						}
+						catch (ApiError &err)
+						{
+							//logging::warning("私聊", "私聊消息失败, 错误码: " + to_string(err.code));
+							conn->write("{\"status\" : 0, \"message\" : \"私聊消息失败\"}");
+						}
+
+					}
+				}
+			}
+			else
+			{
+				conn->write("{\"status\" : 0, \"message\" : \"JSON parase Failed\"}");
+			}
+			//root.isObject();
 		});
 		server.bindAndListen(serverAddr);
 
