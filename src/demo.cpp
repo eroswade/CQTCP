@@ -16,32 +16,31 @@ Json::Value root;
 uv::EventLoop* loop = 0;
 //sqlite3* db;
 char* err_msg = 0;
-CQ_INIT{
-	on_enable([]{
-		logging::info("启用", "插件初始化");
 
-		loop = uv::EventLoop::DefaultLoop();
+DWORD WINAPI RunSocketThread(LPVOID p)
+{
+	loop = uv::EventLoop::DefaultLoop();
 
-		uv::SocketAddr serverAddr("127.0.0.1", 20005, uv::SocketAddr::Ipv4);
-		uv::TcpServer server(loop);
-		server.setMessageCallback([](uv::TcpConnectionPtr conn, const char* data, ssize_t size)
+	uv::SocketAddr serverAddr("127.0.0.1", 20005, uv::SocketAddr::Ipv4);
+	uv::TcpServer server(loop);
+	server.setMessageCallback([](uv::TcpConnectionPtr conn, const char* data, ssize_t size)
 		{
 			logging::info("私聊", std::string(data, size));
 
-			bool ret = reader.parse(std::string(data, size),root);
+			bool ret = reader.parse(std::string(data, size), root);
 			if (ret)
 			{
 				if (root.isMember("groupid"))
 				{
 					if (root.isMember("message"))
 					{
-						try{
+						try {
 							send_group_message(root["groupid"].asInt64(), root["message"].asString());
 							std::string str = "{\"status\" : 1, \"message\" : \"群消息成功\"}";
 							conn->write(str.c_str(), str.length(), nullptr);
-							
+
 						}
-						catch (ApiError &err)
+						catch (ApiError& err)
 						{
 							logging::info("群聊", "群消息失败, 错误码: " + to_string(err.code));
 							std::string str = "{\"status\" : 0, \"message\" : \"群消息失败\"}";
@@ -61,7 +60,7 @@ CQ_INIT{
 							conn->write(str.c_str(), str.length(), nullptr);
 
 						}
-						catch (ApiError &err)
+						catch (ApiError& err)
 						{
 							//logging::warning("私聊", "私聊消息失败, 错误码: " + to_string(err.code));
 							std::string str = "{\"status\" : 0, \"message\" : \"私聊消息失败\"}";
@@ -79,8 +78,17 @@ CQ_INIT{
 			}
 			//root.isObject();
 		});
-		server.bindAndListen(serverAddr);
-		loop->run();
+	server.bindAndListen(serverAddr);
+	loop->run();
+}
+
+CQ_INIT{
+	on_enable([]{
+		logging::info("启用", "插件初始化");
+
+		HANDLE hThread;
+		DWORD  threadId;
+		hThread = CreateThread(NULL, 0, RunSocketThread, 0, 0, &threadId);
 		logging::info("启用", "插件已启用");
 
 	});
