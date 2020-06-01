@@ -18,6 +18,7 @@ uv::EventLoop* loop = 0;
 char* err_msg = 0;
 CQ_INIT{
 	on_enable([]{
+		logging::info("启用", "插件初始化");
 
 		loop = uv::EventLoop::DefaultLoop();
 
@@ -26,7 +27,6 @@ CQ_INIT{
 		server.setMessageCallback([](uv::TcpConnectionPtr conn, const char* data, ssize_t size)
 		{
 			logging::info("私聊", std::string(data, size));
-			conn->write(data, size, nullptr);
 
 			bool ret = reader.parse(std::string(data, size),root);
 			if (ret)
