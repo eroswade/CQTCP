@@ -18,7 +18,6 @@ uv::EventLoop* loop = 0;
 char* err_msg = 0;
 CQ_INIT{
 	on_enable([]{
-		logging::info("启用", "插件已启用");
 
 		loop = uv::EventLoop::DefaultLoop();
 
@@ -26,8 +25,8 @@ CQ_INIT{
 		uv::TcpServer server(loop);
 		server.setMessageCallback([](uv::TcpConnectionPtr conn, const char* data, ssize_t size)
 		{
-			logging::warning("socket", std::string(data, size));
-			//conn->write(data, size, nullptr);
+			logging::info("私聊", std::string(data, size));
+			conn->write(data, size, nullptr);
 
 			bool ret = reader.parse(std::string(data, size),root);
 			if (ret)
@@ -38,12 +37,15 @@ CQ_INIT{
 					{
 						try{
 							send_group_message(root["groupid"].asInt64(), root["message"].asString());
-							conn->write("{\"status\" : 1, \"message\" : \"群消息成功\"}");
+							std::string str = "{\"status\" : 1, \"message\" : \"群消息成功\"}";
+							conn->write(str.c_str(), str.length(), nullptr);
+							
 						}
 						catch (ApiError &err)
 						{
-							logging::warning("群聊", "群消息失败, 错误码: " + to_string(err.code));
-							conn->write("{\"status\" : 0, \"message\" : \"群消息失败\"}");
+							logging::info("群聊", "群消息失败, 错误码: " + to_string(err.code));
+							std::string str = "{\"status\" : 0, \"message\" : \"群消息失败\"}";
+							conn->write(str.c_str(), str.length(), nullptr);
 						}
 					}
 				}
@@ -55,13 +57,15 @@ CQ_INIT{
 						try
 						{
 							auto msgid = send_private_message(root["qqid"].asInt64(), root["message"].asString()); // 直接复读消息
-							conn->write("{\"status\" : 1, \"message\" : \"私聊消息成功\"}");
+							std::string str = "{\"status\" : 1, \"message\" : \"私聊消息成功\"}";
+							conn->write(str.c_str(), str.length(), nullptr);
 
 						}
 						catch (ApiError &err)
 						{
 							//logging::warning("私聊", "私聊消息失败, 错误码: " + to_string(err.code));
-							conn->write("{\"status\" : 0, \"message\" : \"私聊消息失败\"}");
+							std::string str = "{\"status\" : 0, \"message\" : \"私聊消息失败\"}";
+							conn->write(str.c_str(), str.length(), nullptr);
 						}
 
 					}
@@ -69,11 +73,15 @@ CQ_INIT{
 			}
 			else
 			{
-				conn->write("{\"status\" : 0, \"message\" : \"JSON parase Failed\"}");
+				std::string str = "{\"status\" : 0, \"message\" : \"JSON parase Failed\"}";
+				conn->write(str.c_str(), str.length(), nullptr);
+
 			}
 			//root.isObject();
 		});
 		server.bindAndListen(serverAddr);
+		loop->run();
+		logging::info("启用", "插件已启用");
 
 	});
 
@@ -86,7 +94,7 @@ CQ_INIT{
 		}
 		catch (ApiError &err) 
 		{
-			logging::warning("私聊", "私聊消息复读失败, 错误码: " + to_string(err.code));
+			logging::info("私聊", "私聊消息复读失败, 错误码: " + to_string(err.code));
 		}
 	});
 
