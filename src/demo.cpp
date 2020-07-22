@@ -34,39 +34,66 @@ DWORD WINAPI RunSocketThread(LPVOID p)
 				{
 					if (root.isMember("message"))
 					{
-						try {
-							send_group_message(root["groupid"].asInt64(), root["message"].asString());
-							std::string str = "{\"status\" : 1, \"message\" : \"群消息成功\"}";
-							conn->write(str.c_str(), str.length(), nullptr);
-
-						}
-						catch (ApiError& err)
+						if (root.isMember("AT"))
 						{
-							logging::info("群聊", "群消息失败, 错误码: " + to_string(err.code));
-							std::string str = "{\"status\" : 0, \"message\" : \"群消息失败\"}";
-							conn->write(str.c_str(), str.length(), nullptr);
+							if (root.isMember("qqid"))
+							{
+								try {
+									send_group_message(root["groupid"].asInt64(), MessageSegment::at(root["qqid"].asInt64()) + root["message"].asString());
+									std::string str = "{\"status\" : 1, \"message\" : \"群消息成功\"}";
+									conn->write(str.c_str(), str.length(), nullptr);
+
+								}
+								catch (ApiError& err)
+								{
+									logging::info("群聊", "群消息失败, 错误码: " + to_string(err.code));
+									std::string str = "{\"status\" : 0, \"message\" : \"群消息失败\"}";
+									conn->write(str.c_str(), str.length(), nullptr);
+								}
+							}
+							else
+							{
+								std::string str = "{\"status\" : 0, \"message\" : \"At 没有对应的对象.\"}";
+								conn->write(str.c_str(), str.length(), nullptr);
+							}
 						}
+						else {
+							try {
+								send_group_message(root["groupid"].asInt64(), root["message"].asString());
+								std::string str = "{\"status\" : 1, \"message\" : \"群消息成功\"}";
+								conn->write(str.c_str(), str.length(), nullptr);
+
+							}
+							catch (ApiError& err)
+							{
+								logging::info("群聊", "群消息失败, 错误码: " + to_string(err.code));
+								std::string str = "{\"status\" : 0, \"message\" : \"群消息失败\"}";
+								conn->write(str.c_str(), str.length(), nullptr);
+							}
+						}
+						
 					}
 				}
-
-				if (root.isMember("qqid"))
-				{
-					if (root.isMember("message"))
+				else {
+					if (root.isMember("qqid"))
 					{
-						try
+						if (root.isMember("message"))
 						{
-							auto msgid = send_private_message(root["qqid"].asInt64(), root["message"].asString()); // 直接复读消息
-							std::string str = "{\"status\" : 1, \"message\" : \"私聊消息成功\"}";
-							conn->write(str.c_str(), str.length(), nullptr);
+							try
+							{
+								auto msgid = send_private_message(root["qqid"].asInt64(), root["message"].asString()); // 直接复读消息
+								std::string str = "{\"status\" : 1, \"message\" : \"私聊消息成功\"}";
+								conn->write(str.c_str(), str.length(), nullptr);
+
+							}
+							catch (ApiError& err)
+							{
+								//logging::warning("私聊", "私聊消息失败, 错误码: " + to_string(err.code));
+								std::string str = "{\"status\" : 0, \"message\" : \"私聊消息失败\"}";
+								conn->write(str.c_str(), str.length(), nullptr);
+							}
 
 						}
-						catch (ApiError& err)
-						{
-							//logging::warning("私聊", "私聊消息失败, 错误码: " + to_string(err.code));
-							std::string str = "{\"status\" : 0, \"message\" : \"私聊消息失败\"}";
-							conn->write(str.c_str(), str.length(), nullptr);
-						}
-
 					}
 				}
 			}
@@ -97,7 +124,7 @@ CQ_INIT{
 	{
 		try 
 		{
-			auto msgid = send_private_message(event.user_id, event.message); // 直接复读消息
+			//auto msgid = send_private_message(event.user_id, event.message); // 直接复读消息
 			//send_message(event.target,MessageSegment::face(111) + "这是通过 message 模块构造的消息~"); // 使用 message 模块构造消息
 		}
 		catch (ApiError &err) 
